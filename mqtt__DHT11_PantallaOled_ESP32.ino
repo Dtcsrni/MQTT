@@ -1,5 +1,5 @@
 /*
- Basic ESP32 MQTT example
+ Ímplementación de Proyecto Cahuitl para MQTT
 */
 
 #include <WiFi.h>
