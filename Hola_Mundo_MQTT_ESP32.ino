@@ -12,8 +12,8 @@
 #define BUILTIN_LED 33
 
 
-const char* ssid = "ArmsysTech";
-const char* password = "sjmahpe122512";
+const char* ssid = "";
+const char* password = "";
 const char* mqtt_server = "mqtt-dashboard.com";
 
 WiFiClient espClient;
