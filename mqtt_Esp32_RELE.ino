@@ -26,8 +26,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 
 
-const char* ssid = "ArmsysTech";
-const char* password = "sjmahpe122512";
+const char* ssid = "";
+const char* password = "";
 const char* mqtt_server = "mqtt-dashboard.com";
 
 WiFiClient espClient;
