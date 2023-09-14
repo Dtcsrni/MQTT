@@ -41,7 +41,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 // Descomenta el tipo de sensor que estás utilizando:
 #define DHTTYPE DHT11  // DHT 11 (AM2302)
 const char* ssid = "ArmsysTech";
-const char* password = "sjmahpe122512";
+const char* password = "";
 const char* mqtt_server = "mqtt-dashboard.com";
 const char* topicIn = "iot/UAEH/ErickVega/Estudio/Ventilador/Input";
 const char* topicOut = "iot/UAEH/ErickVega/Estudio/Ventilador/Output";
