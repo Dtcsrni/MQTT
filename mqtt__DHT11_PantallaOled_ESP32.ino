@@ -37,14 +37,21 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 
 #define DHTPIN 2  // Pin digital conectado al sensor DHT
-
 // Descomenta el tipo de sensor que estás utilizando:
 #define DHTTYPE DHT11  // DHT 11 (AM2302)
+
+//Datos Wifi
 const char* ssid = "ArmsysTech";
-const char* password = "";
-const char* mqtt_server = "mqtt-dashboard.com";
-const char* topicIn = "iot/UAEH/ErickVega/Estudio/Ventilador/Input";
-const char* topicOut = "iot/UAEH/ErickVega/Estudio/Ventilador/Output";
+const char* password = "sjmahpe122512";
+
+//Datos MQTT
+//Broker Público
+const char* mqtt_servidor_publico = "mqtt-dashboard.com";
+//Broker Local
+const char* mqtt_servidor_local = "127.0.0.1";
+
+const char* topic_Sensores = "iot/UAEH/ErickVega/Estudio/Sensores";
+const char* topic_Actuadores = "iot/UAEH/ErickVega/Estudio/Actuadores";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -56,11 +63,12 @@ float temperaturaActual = 0;
 float temperaturaAnterior = 0;
 float humedadActual = 0;
 float humedadAnterior = 0;
-char payload[128];
-StaticJsonDocument<128> datosSensores;
 int ciclos_Encendidos_Pantalla = 0;
 long now = 0;
-bool ventiladorActivo = false;
+bool ventilador = false;
+bool modoAutomatico = false;
+StaticJsonDocument<48> datosSensores;
+StaticJsonDocument<16> datosActuadores;
 
 DHT dht(DHTPIN, DHTTYPE);
 
@@ -131,20 +139,20 @@ const unsigned char icono_wifi[90] PROGMEM = {
   0x00, 0x00, 0x08, 0x00, 0x07, 0x80, 0x00, 0x00, 0x38, 0x00
 };
 // 'icono_ventilador', 40x40px
-const unsigned char icono_ventilador[200] PROGMEM = {
-  0xff, 0xff, 0xc1, 0xff, 0xff, 0xff, 0xfe, 0x00, 0x7f, 0xff, 0xff, 0xf0, 0x00, 0x3f, 0xff, 0xff,
-  0xc4, 0x00, 0x1f, 0xff, 0xff, 0x9c, 0x00, 0x0f, 0xff, 0xfe, 0x3c, 0x00, 0x0e, 0x7f, 0xfc, 0xfe,
-  0x00, 0x0f, 0x3f, 0xf9, 0xff, 0x00, 0x0f, 0x9f, 0xfb, 0xff, 0x00, 0x0f, 0xdf, 0xff, 0xff, 0x80,
-  0x0f, 0xcf, 0xff, 0xff, 0xc0, 0x0f, 0xe7, 0xff, 0xff, 0xc0, 0x1f, 0xf7, 0xf0, 0x1f, 0xc0, 0x1f,
-  0xf3, 0xe0, 0x07, 0xfe, 0x3f, 0xfb, 0xc0, 0x03, 0xc3, 0x7f, 0xc3, 0x80, 0x01, 0x00, 0xff, 0x81,
-  0x80, 0x02, 0x18, 0x7e, 0x01, 0x00, 0x06, 0x7e, 0x7c, 0x01, 0x00, 0x04, 0x66, 0x20, 0x00, 0x00,
-  0x04, 0xc3, 0x20, 0x00, 0x00, 0x04, 0xc3, 0x20, 0x00, 0x00, 0x04, 0x66, 0x20, 0x00, 0x80, 0x3e,
-  0x7e, 0x60, 0x00, 0x80, 0x7e, 0x18, 0x40, 0x01, 0x81, 0xff, 0x00, 0x80, 0x01, 0xc3, 0xfe, 0xc3,
-  0xc0, 0x03, 0xdf, 0xfc, 0x7f, 0xe0, 0x07, 0xcf, 0xf8, 0x03, 0xf8, 0x0f, 0xef, 0xf8, 0x03, 0xff,
-  0xff, 0xe7, 0xf0, 0x03, 0xff, 0xff, 0xf3, 0xf0, 0x01, 0xff, 0xff, 0xfb, 0xf0, 0x00, 0xff, 0xdf,
-  0xf9, 0xf0, 0x00, 0xff, 0x9f, 0xfc, 0xf0, 0x00, 0x7f, 0x3f, 0xfe, 0x70, 0x00, 0x3c, 0x7f, 0xff,
-  0xf0, 0x00, 0x39, 0xff, 0xff, 0xf8, 0x00, 0x23, 0xff, 0xff, 0xfc, 0x00, 0x0f, 0xff, 0xff, 0xfe,
-  0x00, 0x7f, 0xff, 0xff, 0xff, 0x83, 0xff, 0xff
+const unsigned char icono_ventilador[30] PROGMEM = {
+  // 'icono_ventilador, 15x15px
+  0xfc, 0x3e, 0xe0, 0x1e, 0xc8, 0x16, 0xdc, 0x12, 0x86, 0x18, 0x82, 0x38, 0x00, 0x20, 0x00, 0x00,
+  0x00, 0x80, 0x0c, 0x00, 0xb8, 0x42, 0x90, 0x7e, 0xc0, 0x32, 0xe0, 0x06, 0xf8, 0x1e
+};
+const unsigned char icono_automatico[30] PROGMEM = {
+  // 'icono_automatico, 15x15px
+  0xf9, 0xfe, 0xf1, 0xfe, 0xf1, 0xfe, 0xe3, 0xfe, 0xc3, 0xfe, 0xc0, 0x3e, 0x80, 0x3e, 0x00, 0x3e,
+  0x00, 0x66, 0x00, 0xe6, 0xf0, 0xc2, 0xe1, 0xda, 0xe3, 0xda, 0xe3, 0x80, 0xe7, 0xbc
+};
+const unsigned char icono_wifi_2[30] PROGMEM = {
+  // 'wifi, 16x15px
+  0x00, 0x00, 0x00, 0x00, 0x07, 0xe0, 0x3f, 0xfc, 0x78, 0x1e, 0x60, 0x06, 0x01, 0x80, 0x0f, 0xf0,
+  0x0c, 0x30, 0x00, 0x00, 0x00, 0x00, 0x01, 0x80, 0x01, 0x80, 0x00, 0x00, 0x00, 0x00
 };
 void generarMensajeConfort(int temperatura, int humedad) {
   // Establecer la posición del cursor en la pantalla para mostrar el mensaje de confort
@@ -169,15 +177,9 @@ void generarMensajeConfort(int temperatura, int humedad) {
   } else if (temperatura >= 40) {
     display.print("Extremo caluroso (!!!)");
   }
-
-  if (temperatura > 20) {
-    ventilarArea(true);
-  } else {
-    ventilarArea(false);
-  }
   // Establecer la posición del cursor en la pantalla para mostrar el mensaje de confort de humedad
 
-  display.setCursor(2, 28);
+  display.setCursor(2, 40);
 
   // Determinar el mensaje de confort según la humedad
   if (humedad <= 30) {
@@ -196,21 +198,6 @@ void generarMensajeConfort(int temperatura, int humedad) {
     display.print("Muy humedo (!)");
   }
 }
-void ventilarArea(bool ventilar) {
-  if (ventilar) {
-    display.drawBitmap(25, 25, icono_ventilador, 40, 40, WHITE);  //mostrar icono de ventilador en pantalla
-    digitalWrite(LED_3, HIGH);
-    digitalWrite(RELE, HIGH);
-    ventiladorActivo = true;
-    delay(2500);
-  } else {
-    digitalWrite(LED_3, LOW);
-    digitalWrite(RELE, LOW);
-    ventiladorActivo = false;
-    delay(2500);
-  }
-}
-
 void conectar_Wifi() {
   // Iniciar conexion WiFi
   Serial.println();
@@ -230,7 +217,7 @@ void conectar_Wifi() {
     digitalWrite(LED_2, HIGH);  // Se hace parpadear el led mientras se logra la conexión
     display.setCursor(5, 50);   // Posición del texto en la pantalla (0, 0)
     display.print("......");
-    display.display();
+
     Serial.print(".");  // Se da retroalimentación al puerto serial mientras se logra la conexión
     digitalWrite(LED_2, LOW);
     delay(400);
@@ -252,6 +239,7 @@ void conectar_Wifi() {
   display.print("IP:");
   display.setCursor(10, 50);  // Posición del texto en la pantalla (0, 0)
   display.print(WiFi.localIP());
+  display.display();
 }
 
 //----------Configuración del programa, esta parte se ejecuta sólo una vez al energizarse el sistema
@@ -305,10 +293,9 @@ void setup() {
   conectar_Wifi();
 
   // Conexion al broker MQTT
-  client.setServer(mqtt_server, 1883);  // Se hace la conexión al servidor MQTT
-  client.setCallback(callback);         //Se activa la función que permite recibir mensajes de respuesta
-
-  refrescarBarraEstado();
+  client.setServer(mqtt_servidor_publico, 1883);  // Se hace la conexión al servidor MQTT Público
+  //client.setServer(mqtt_servidor_local, 1883);    // Se hace la conexión al servidor MQTT Local
+  client.setCallback(callback);  //Se activa la función que permite recibir mensajes de respuesta
   display.display();
 }  // Fin del void setup()
 
@@ -320,7 +307,6 @@ void refrescarDatosAmbientales() {
   humedadActual = dht.readHumidity();
 
   if (presenciaHumanaCercana) {
-
     display.setCursor(2, 20);
     display.print("Temperatura: ");
     display.setCursor(80, 20);
@@ -344,25 +330,44 @@ void refrescarDatosAmbientales() {
       display.setCursor(2, 50);
       display.print("Sin datos");
     }
-    display.display();
   }
 }
 void publicarDatosMQTT() {
+  char payload[128];
+  size_t n = 0;
   ultimoMsj = now;
-  datosSensores["estacionSensado"] = 1;
   datosSensores["temperatura"] = temperaturaActual;
   datosSensores["humedad"] = humedadActual;
   datosSensores["presenciaHumana"] = presenciaHumanaCercana;
-  datosSensores["ventilador"] = ventiladorActivo;
+  datosSensores["ventilador"] = ventilador;
+
   serializeJson(datosSensores, payload);
-  client.publish(topicOut, payload);
-  Serial.print("Publish message: ");
+  client.publish(topic_Sensores, payload);
   Serial.println(payload);
 }
+void ventilarArea(bool ventilar) {
+  if (ventilar) {
+    digitalWrite(LED_3, HIGH);
+    digitalWrite(RELE, HIGH);
+    ventilador = true;
+    Serial.println("Ventilador Activado");
+    delay(2500);
+  } else {
+    digitalWrite(LED_3, LOW);
+    digitalWrite(RELE, LOW);
+    ventilador = false;
+    Serial.println("Ventilador Desactivado");
+    delay(2500);
+  }
+}
 
+
+////////Loop principal
 void loop() {
+  display.clearDisplay();
   presenciaHumanaCercana = digitalRead(PIR);  // Se revisa si hay presencia de un ser vivo cerca
-  if (presenciaHumanaCercana && ciclos_Encendidos_Pantalla < 10) {
+
+  if (presenciaHumanaCercana && ciclos_Encendidos_Pantalla < 20) {
     display.ssd1306_command(SSD1306_DISPLAYON);  // Encender pantalla
     ciclos_Encendidos_Pantalla++;
   } else {
@@ -374,47 +379,71 @@ void loop() {
     reconnect();
   }
   refrescarDatosAmbientales();  //refresca los datos del sensor DHT
-  client.loop();                // Loop de cliente MQTT
+  if (modoAutomatico) {
+    if (temperaturaActual > 22) {  //Si está activado el modo automático, revisar criterio de revisión
+      ventilarArea(true);
+    } else {
+      ventilarArea(false);
+    }
+  }
+
+
+  client.loop();  // Loop de cliente MQTT
 
   now = millis();
   if (now - ultimoMsj > 3000) {  //si el último mensaje se envió hace más de 3 segundos
     publicarDatosMQTT();
   }
+  refrescarBarraEstado();
   display.display();
   delay(3500);
-}  // Fin del void setup()
+}  // Fin del void loop()
+
+
 
 //----------Funciones de usuario
 // Funcion Callback, aqui se pueden poner acciones si se reciben mensajes MQTT
-void callback(char* topic, byte* message, unsigned int length) {
+void callback(char* topic1, byte* message, unsigned int length) {
   display.clearDisplay();
-  delay(1000);
-  Serial.print("Mensaje recibido: ");
+  Serial.println("Mensaje recibido: ");
 
   DynamicJsonDocument mensaje(128);
   deserializeJson(mensaje, message);
+  bool ventilador = mensaje["ventilador"];
+  bool modoAutomatico1 = mensaje["modoAutomatico"];
 
-  bool ventiladorActivado = datosSensores["ventilador"];
-  // Imprimir mensaje
-  String messageTemp;
   for (int i = 0; i < length; i++) {
     Serial.print((char)message[i]);
-    messageTemp += (char)message[i];
   }
-  if (String(topic) == topicIn) {  // Si se recibe el mensaje true, se enciende el led y el rele
-    if (messageTemp.equals("ActivarVentilador")) {
+
+  if (String(topic1) == topic_Actuadores) {  // Si se recibe el mensaje true, se enciende el led y el rele
+    if (ventilador) {
       Serial.println("ActivarVentilador");
       ventilarArea(true);
-    }                                                       // fin de if(messageTemp == "true")
-    else if (messageTemp.equals("DesactivarVentilador")) {  // De no recibirse el mensaje true, se busca el mensaje false para apagar el led y el rele
+      if (modoAutomatico) {
+        modoAutomatico = false;
+        Serial.println("Ventilador automático desactivado");
+      }
+    } else {
       Serial.println("DesactivarVentilador");
       ventilarArea(false);
-      //ventilarArea(false);
-
-    }  // fin de else if(messageTemp == "false")
-  }    // fin de if (String(topic) == "iot/output")
-  refrescarBarraEstado();
-  display.display();
+      if (modoAutomatico) {
+        modoAutomatico = false;
+        Serial.println("Ventilador automático desactivado");
+      }
+    }
+    if (modoAutomatico1) {
+      if (!modoAutomatico) {
+        modoAutomatico = true;
+        Serial.println("Modo automático activado");
+      }
+    } else {
+      if (modoAutomatico) {
+        modoAutomatico = false;
+        Serial.println("Modo automático desactivado");
+      }
+    }
+  }  // fin de if (String(topic) == "iot/output")
   delay(1000);
 }
 // funcion para reconectar el cliente MQTT
@@ -427,15 +456,16 @@ void reconnect() {
     display.print("Conectando MQTT");
     Serial.print("Intentando conexion MQTT");
     if (client.connect("IoTClient_Evega")) {
-      display.setCursor(5, 0);
+      display.setCursor(5, 25);
       Serial.print("Conexion exitosa");
       display.print("Conexion exitosa");
       display.drawBitmap(0, 15, icono_iot, 43, 20, WHITE);
       display.drawBitmap(40, 15, icono_iot, 20, 15, WHITE);
       // Suscribirse al tema de respuestas
-      client.subscribe(topicIn);
+      client.subscribe(topic_Actuadores);
       digitalWrite(LED_3, HIGH);
     } else {
+      display.clearDisplay();
       digitalWrite(LED_3, LOW);
       display.setCursor(0, 50);
       display.print("Falló la comunicación, error rc=");
@@ -446,31 +476,32 @@ void reconnect() {
       display.setCursor(0, 70);
       display.print("Reintentando en 5 segundos");
       Serial.println("Reintentando en 5 segundos");
+      display.display();
       delay(5000);
       Serial.println(client.connected());
       display.setCursor(0, 8);
       display.print(client.connected());
     }
-    refrescarBarraEstado();
-    display.display();
   }
+  display.display();
 }
 
 void refrescarBarraEstado() {
-  display.clearDisplay();
-  refrescarDatosAmbientales();
+  if (WiFi.status() == WL_CONNECTED) {
+    display.drawBitmap(0, 0, icono_wifi_2, 16, 15, WHITE);  //mostrar icono de ventilador en pantalla
+    digitalWrite(LED_2, HIGH);                              // Una vez lograda la conexión se enciende el led sobre el ESP32
+  }
   if (client.connected()) {
-    display.setCursor(20, 0);  // Posición del texto en la pantalla (0, 0)
+    display.setCursor(27, 0);  // Posición del texto en la pantalla (0, 0)
     display.print("MQTT");
-    display.setCursor(10, 0);  // Posición del texto en la pantalla (0, 0)
+    display.setCursor(20, 0);  // Posición del texto en la pantalla (0, 0)
     display.write(4);
     digitalWrite(BUILTIN_LED, HIGH);  // Se activa el led en el nodeMCU para indicar que hay conexión MQTT
   }
-  if (WiFi.status() == WL_CONNECTED) {
-    display.setCursor(70, 0);  // Posición del texto en la pantalla (0, 0)
-    display.print("WiFi");
-    display.setCursor(60, 0);  // Posición del texto en la pantalla (0, 0)
-    display.write(15);
-    digitalWrite(LED_2, HIGH);  // Una vez lograda la conexión se enciende el led sobre el ESP32
+  if (ventilador) {
+    display.drawBitmap(90, 0, icono_ventilador, 15, 15, WHITE);  //mostrar icono de ventilador en pantalla
+  }
+  if (modoAutomatico) {
+    display.drawBitmap(106, 0, icono_automatico, 15, 15, WHITE);  //mostrar icono de ventilador en pantalla
   }
 }
