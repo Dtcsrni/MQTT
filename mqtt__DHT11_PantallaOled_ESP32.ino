@@ -9,7 +9,8 @@
 -Código para controlar un nodo de sensado y actuación donde se midan temperatura, humedad (DHT11) y presencia viva (PIR)                           -
 -Los datos se muestran en la pantalla física cuando hay alguien cerca para verlo, y al no detectarse presencia humana por un tiempo considerable   -
 -se apaga la pantalla para ahorrar energía y mejorar la vida de la pantalla OLED.                                                                  -
--Se publica en un broker de HiveQ los datos sensados en formato JSON y se controla el funcionamiento del ventilador con una app (IoT MQTT Panel    -
+-Se publica en un broker de HiveQ los datos sensados en formato JSON y se controla el funcionamiento del ventilador con una app (IoT MQTT Panel)   -
+-Basado en proyecto Cahuitl                                                                                                                        -
 ----------------------------------------------------------------------------------------------------------------------------------------------------
 */
 
