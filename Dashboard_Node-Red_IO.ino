@@ -31,7 +31,7 @@ bool boton2Anterior = false;
 bool cambios = false;
 String jsonComandos = "";
 String comandoLed = "";
-
+String mensajeSerial = "";
 
 void setup() {
   Serial.begin(9600);
@@ -45,14 +45,18 @@ void setup() {
   pinMode(btnPIN2, INPUT_PULLUP);
   pinMode(potenciometro1, INPUT);
   pinMode(potenciometro2, INPUT);
-  Serial.print("Inicializado");
 }
 
 void loop() {
-  if (Serial.available() > 0) {
 
-    deserealizarJSON(Serial.readString());  //se obtiene la cadena de LED a mostrar
-    procesarComandoLED(comandoLed);         //se procesa la cadena obtenida  para mostrar los LED
+  if (Serial.available() > 0) {
+    mensajeSerial = Serial.readString();
+    if (mensajeSerial.length() <= 2) {
+      comandoLed = mensajeSerial;
+    } else {
+      comandoLed = deserealizarJSON(mensajeSerial);  //se obtiene la cadena de LED a mostrar
+    }
+    procesarComandoLED(comandoLed);  //se procesa la cadena obtenida  para mostrar los LED
   }
   if (leerValoresAnalogicos()) {
     serializarJSON();
@@ -69,9 +73,9 @@ bool leerValoresAnalogicos() {
   boton1 = !digitalRead(btnPIN1);
   boton2 = !digitalRead(btnPIN2);
   if (pot1 != pot1Anterior || pot2 != pot2Anterior || boton1 != boton1Anterior || boton2 != boton2Anterior)
-  cambios = true;
+    cambios = true;
   else
-  cambios = false;
+    cambios = false;
 
   return cambios;
 }
@@ -87,9 +91,9 @@ void procesarComandoLED(String texto) {
       if (contadorCaracteres == 1)   //revisar el primer digito
         PinElegido = String(texto.charAt(i)).toInt();
       if (contadorCaracteres == 2) {
-        if (String(texto.charAt(i)).toInt() == 1) {
+        if (String(texto.charAt(i)).toInt() == 1 || (String(texto.charAt(i - 1)).toInt() == 7 && String(texto.charAt(i + 1)).toInt() == 1)) {
           Estado = 3;
-        } else if (String(texto.charAt(i)).toInt() == 0) {
+        } else if (String(texto.charAt(i)).toInt() == 0 || (String(texto.charAt(i - 1)).toInt() == 7 && String(texto.charAt(i + 1)).toInt() == 0)) {
           Estado = 2;
         }
       }
@@ -122,23 +126,25 @@ void ejecutarComandoLED() {
   }
   Estado = 0;
 }
-void deserealizarJSON(String json) {
+String deserealizarJSON(String json) {
+  String comandoLed = "";
   StaticJsonDocument<300> doc;
   DeserializationError error = deserializeJson(doc, json);
-  
+
   if (error) { return; }  //si hay error se finaliza programa
 
   comandoLed = doc["comandoled"].as<String>();
 
-  return;
+  return comandoLed;
 }
+
 void serializarJSON() {
   String json;
   StaticJsonDocument<300> doc;
   doc["pot1"] = pot1;
   doc["pot2"] = pot2;
-  doc["boton1"] = boton1;
-  doc["boton2"] = boton2;
+  doc["btn1"] = boton1;
+  doc["btn2"] = boton2;
   serializeJson(doc, json);
   Serial.println(json);
 }
