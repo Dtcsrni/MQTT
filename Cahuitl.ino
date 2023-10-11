@@ -55,6 +55,7 @@ const char* topic_Actuadores = "iot/UAEH/ErickVega/Estudio/Actuadores";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
+PubSubClient client2(espClient);
 long ultimoMsj = 0;
 char mensaje[50];
 int value = 0;
@@ -367,7 +368,7 @@ void loop() {
   display.clearDisplay();
   presenciaHumanaCercana = digitalRead(PIR);  // Se revisa si hay presencia de un ser vivo cerca
 
-  if (presenciaHumanaCercana && ciclos_Encendidos_Pantalla < 20) {
+  if (presenciaHumanaCercana && ciclos_Encendidos_Pantalla < 50) {
     display.ssd1306_command(SSD1306_DISPLAYON);  // Encender pantalla
     ciclos_Encendidos_Pantalla++;
   } else {
@@ -380,7 +381,7 @@ void loop() {
   }
   refrescarDatosAmbientales();  //refresca los datos del sensor DHT
   if (modoAutomatico) {
-    if (temperaturaActual > 22) {  //Si está activado el modo automático, revisar criterio de revisión
+    if (temperaturaActual > 20) {  //Si está activado el modo automático, revisar criterio de revisión
       ventilarArea(true);
     } else {
       ventilarArea(false);
@@ -391,12 +392,12 @@ void loop() {
   client.loop();  // Loop de cliente MQTT
 
   now = millis();
-  if (now - ultimoMsj > 3000) {  //si el último mensaje se envió hace más de 3 segundos
+  if (now - ultimoMsj > 5000) {  //si el último mensaje se envió hace más de 3 segundos
     publicarDatosMQTT();
   }
   refrescarBarraEstado();
   display.display();
-  delay(3500);
+  delay(4000);
 }  // Fin del void loop()
 
 
@@ -444,7 +445,6 @@ void callback(char* topic1, byte* message, unsigned int length) {
       }
     }
   }  // fin de if (String(topic) == "iot/output")
-  delay(1000);
 }
 // funcion para reconectar el cliente MQTT
 void reconnect() {
