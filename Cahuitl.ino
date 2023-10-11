@@ -496,7 +496,6 @@ void refrescarBarraEstado() {
     display.print("MQTT");
     display.setCursor(20, 0);  // Posición del texto en la pantalla (0, 0)
     display.write(4);
-    digitalWrite(BUILTIN_LED, HIGH);  // Se activa el led en el nodeMCU para indicar que hay conexión MQTT
   }
   if (ventilador) {
     display.drawBitmap(90, 0, icono_ventilador, 15, 15, WHITE);  //mostrar icono de ventilador en pantalla
